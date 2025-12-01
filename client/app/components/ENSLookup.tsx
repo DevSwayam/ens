@@ -39,6 +39,7 @@ export default function ENSLookup() {
   const [profile, setProfile] = useState<ENSProfile | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notRegistered, setNotRegistered] = useState<string | null>(null)
 
   const lookupENS = async () => {
     if (!ensName.trim()) return
@@ -46,15 +47,19 @@ export default function ENSLookup() {
     setLoading(true)
     setError(null)
     setProfile(null)
+    setNotRegistered(null)
 
     try {
-      const normalizedName = normalize(ensName.trim())
+      const fullName = ensName.trim().toLowerCase().endsWith('.eth')
+        ? ensName.trim().toLowerCase()
+        : `${ensName.trim().toLowerCase()}.eth`
+      const normalizedName = normalize(fullName)
 
       // Fetch address first (required to continue)
       const address = await client.getEnsAddress({ name: normalizedName })
 
       if (!address) {
-        setError(`ENS name "${ensName}" not found or has no address set`)
+        setNotRegistered(normalizedName)
         setLoading(false)
         return
       }
@@ -116,16 +121,26 @@ export default function ENSLookup() {
     return linkMap[key]
   }
 
+  const getFullEnsName = (name: string) => {
+    const trimmed = name.trim().toLowerCase()
+    if (!trimmed) return ''
+    if (trimmed.endsWith('.eth')) return trimmed
+    return `${trimmed}.eth`
+  }
+
   return (
     <div className="ens-lookup">
       <form onSubmit={handleSubmit} className="search-form">
-        <input
-          type="text"
-          value={ensName}
-          onChange={(e) => setEnsName(e.target.value)}
-          placeholder="Enter ENS name (e.g., vitalik.eth)"
-          className="search-input"
-        />
+        <div className="search-input-wrapper">
+          <input
+            type="text"
+            value={ensName}
+            onChange={(e) => setEnsName(e.target.value.replace(/\.eth$/i, ''))}
+            placeholder="vitalik"
+            className="search-input"
+          />
+          <span className="search-input-suffix">.eth</span>
+        </div>
         <button type="submit" disabled={loading} className="search-button">
           {loading ? 'Looking up...' : 'Lookup'}
         </button>
@@ -133,67 +148,87 @@ export default function ENSLookup() {
 
       {error && <div className="error-message">{error}</div>}
 
+      {notRegistered && (
+        <div className="not-registered-card">
+          <div className="not-registered-icon">?</div>
+          <h3>{notRegistered}</h3>
+          <p>This ENS name is not registered yet.</p>
+          <a
+            href={`https://app.ens.domains/${notRegistered}/register`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="register-button"
+          >
+            Register on ENS
+          </a>
+        </div>
+      )}
+
       {profile && (
         <div className="profile-card">
           <div className="profile-header">
-            {profile.avatar ? (
-              <img src={profile.avatar} alt={profile.name} className="profile-avatar" />
-            ) : (
-              <div className="profile-avatar-placeholder">
-                {profile.name.charAt(0).toUpperCase()}
+            <div className="profile-header-content">
+              {profile.avatar ? (
+                <img src={profile.avatar} alt={profile.name} className="profile-avatar" />
+              ) : (
+                <div className="profile-avatar-placeholder">
+                  {profile.name.charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="profile-name-section">
+                <h2 className="profile-name">{profile.name}</h2>
+                {profile.records.name && (
+                  <p className="profile-display-name">{profile.records.name}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="profile-content">
+            <div className="profile-section">
+              <h3>Address</h3>
+              <p className="address">{profile.address}</p>
+            </div>
+
+            {profile.records.description && (
+              <div className="profile-section">
+                <h3>Description</h3>
+                <p>{profile.records.description}</p>
               </div>
             )}
-            <div className="profile-name-section">
-              <h2 className="profile-name">{profile.name}</h2>
-              {profile.records.name && (
-                <p className="profile-display-name">{profile.records.name}</p>
-              )}
-            </div>
-          </div>
 
-          <div className="profile-section">
-            <h3>Address</h3>
-            <p className="address">{profile.address}</p>
-          </div>
-
-          {profile.records.description && (
-            <div className="profile-section">
-              <h3>Description</h3>
-              <p>{profile.records.description}</p>
-            </div>
-          )}
-
-          {profile.records.location && (
-            <div className="profile-section">
-              <h3>Location</h3>
-              <p>{profile.records.location}</p>
-            </div>
-          )}
-
-          {Object.keys(profile.records).filter(k => !['description', 'name', 'avatar', 'header', 'location'].includes(k)).length > 0 && (
-            <div className="profile-section">
-              <h3>Links & Socials</h3>
-              <div className="records-grid">
-                {Object.entries(profile.records)
-                  .filter(([key]) => !['description', 'name', 'avatar', 'header', 'location'].includes(key))
-                  .map(([key, value]) => {
-                    const link = getRecordLink(key, value)
-                    return (
-                      <div key={key} className="record-item">
-                        <span className="record-key">{formatRecordKey(key)}</span>
-                        {link ? (
-                          <a href={link} target="_blank" rel="noopener noreferrer" className="record-value record-link">
-                            {value}
-                          </a>
-                        ) : (
-                          <span className="record-value">{value}</span>
-                        )}
-                      </div>
-                    )
-                  })}
+            {profile.records.location && (
+              <div className="profile-section">
+                <h3>Location</h3>
+                <p>{profile.records.location}</p>
               </div>
-            </div>
-          )}
+            )}
+
+            {Object.keys(profile.records).filter(k => !['description', 'name', 'avatar', 'header', 'location'].includes(k)).length > 0 && (
+              <div className="profile-section">
+                <h3>Links & Socials</h3>
+                <div className="records-grid">
+                  {Object.entries(profile.records)
+                    .filter(([key]) => !['description', 'name', 'avatar', 'header', 'location'].includes(key))
+                    .map(([key, value]) => {
+                      const link = getRecordLink(key, value)
+                      return (
+                        <div key={key} className="record-item">
+                          <span className="record-key">{formatRecordKey(key)}</span>
+                          {link ? (
+                            <a href={link} target="_blank" rel="noopener noreferrer" className="record-value record-link">
+                              {value}
+                            </a>
+                          ) : (
+                            <span className="record-value">{value}</span>
+                          )}
+                        </div>
+                      )
+                    })}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

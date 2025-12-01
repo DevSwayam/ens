@@ -21,7 +21,10 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 10%);
   --ring: oklch(0.556 0 0);
-  --radius: 0.5rem;
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
 }
 
 html,
@@ -82,47 +85,88 @@ h1 {
   margin-bottom: 1.5rem;
 }
 
-.search-input {
+.search-input-wrapper {
   flex: 1;
-  padding: 0.75rem 1rem;
-  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  height: 2.5rem;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--input);
-  color: var(--foreground);
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border-radius: var(--radius-md);
+  background: var(--background);
+  transition: all 0.2s;
 }
 
-.search-input:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 2px oklch(0.556 0 0 / 20%);
+.search-input-wrapper:focus-within {
+  outline: none;
+  ring: 2px;
+  ring-offset: 2px;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
+}
+
+.search-input {
+  flex: 1;
+  height: 100%;
+  padding: 0 0.25rem 0 0.75rem;
+  font-size: 0.875rem;
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  outline: none;
+  min-width: 0;
 }
 
 .search-input::placeholder {
   color: var(--muted-foreground);
 }
 
+.search-input-suffix {
+  padding-right: 0.75rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+/* Button - matching your app's button.tsx */
 .search-button {
-  padding: 0.75rem 1.5rem;
-  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
   font-weight: 500;
   border: none;
-  border-radius: var(--radius);
+  border-radius: var(--radius-xl);
   background: var(--primary);
   color: var(--primary-foreground);
   cursor: pointer;
-  transition: opacity 0.2s;
   white-space: nowrap;
+  transform: scale(1);
+  transition: all 0.2s;
 }
 
 .search-button:hover:not(:disabled) {
-  opacity: 0.9;
+  background: oklch(0.922 0 0 / 90%);
+}
+
+.search-button:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.search-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--ring);
 }
 
 .search-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  filter: brightness(0.9);
+}
+
+.search-button:disabled:active {
+  transform: scale(1);
 }
 
 .error-message {
@@ -130,27 +174,99 @@ h1 {
   color: var(--destructive);
   padding: 0.875rem 1rem;
   border: 1px solid oklch(0.704 0.191 22.216 / 30%);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   margin-bottom: 1.5rem;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
-/* Profile Card */
+/* Not Registered Card */
+.not-registered-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.not-registered-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.not-registered-card h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
+  word-break: break-word;
+}
+
+.not-registered-card p {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.register-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: var(--radius-xl);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  text-decoration: none;
+  cursor: pointer;
+  transform: scale(1);
+  transition: all 0.2s;
+}
+
+.register-button:hover {
+  background: oklch(0.922 0 0 / 90%);
+}
+
+.register-button:active {
+  transform: scale(0.95);
+}
+
+/* Profile Card - matching your app's card.tsx */
 .profile-card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 1.5);
-  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  color: var(--card-foreground);
 }
 
 .profile-header {
   display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  padding: 1.5rem;
+  padding-bottom: 0;
+}
+
+.profile-header-content {
+  display: flex;
   align-items: center;
-  gap: 1.25rem;
-  margin-bottom: 1.25rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border);
+  gap: 1rem;
 }
 
 .profile-avatar {
@@ -183,16 +299,23 @@ h1 {
 }
 
 .profile-name {
-  font-size: clamp(1.125rem, 4vw, 1.375rem);
-  color: var(--foreground);
-  margin-bottom: 0.125rem;
+  font-size: 1.5rem;
   font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.025em;
+  color: var(--foreground);
   word-break: break-word;
+  margin-bottom: 0.25rem;
 }
 
 .profile-display-name {
   color: var(--muted-foreground);
   font-size: 0.875rem;
+}
+
+.profile-content {
+  padding: 1.5rem;
+  padding-top: 1rem;
 }
 
 .profile-section {
@@ -204,7 +327,7 @@ h1 {
 }
 
 .profile-section h3 {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--muted-foreground);
@@ -215,16 +338,15 @@ h1 {
 .profile-section p {
   color: var(--foreground);
   line-height: 1.6;
-  font-size: 0.9rem;
-  opacity: 0.9;
+  font-size: 0.875rem;
 }
 
 .address {
   font-family: 'SF Mono', 'Monaco', 'Menlo', monospace;
-  font-size: clamp(0.65rem, 2.5vw, 0.8rem);
+  font-size: clamp(0.65rem, 2.5vw, 0.75rem);
   background: var(--secondary);
-  padding: 0.75rem 1rem;
-  border-radius: var(--radius);
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--radius-md);
   word-break: break-all;
   border: 1px solid var(--border);
   color: var(--foreground);
@@ -240,25 +362,24 @@ h1 {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding: 0.625rem 0.875rem;
+  padding: 0.5rem 0.75rem;
   background: var(--secondary);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
 }
 
 .record-key {
   font-weight: 500;
   color: var(--muted-foreground);
   min-width: 80px;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   flex-shrink: 0;
 }
 
 .record-value {
   color: var(--foreground);
   word-break: break-all;
-  font-size: 0.85rem;
-  opacity: 0.9;
+  font-size: 0.875rem;
 }
 
 .record-link {
@@ -282,12 +403,13 @@ h1 {
     padding: 0;
   }
 
-  .profile-card {
+  .profile-header,
+  .profile-content {
     padding: 1.25rem;
   }
 
-  .profile-header {
-    gap: 1rem;
+  .profile-content {
+    padding-top: 1rem;
   }
 
   .profile-avatar,
@@ -313,28 +435,31 @@ h1 {
     gap: 0.5rem;
   }
 
-  .search-input {
-    padding: 0.75rem 0.875rem;
+  .search-input-wrapper {
+    height: 2.75rem;
   }
 
   .search-button {
     width: 100%;
-    padding: 0.75rem 1rem;
-  }
-
-  .profile-card {
-    padding: 1rem;
-    border-radius: var(--radius);
+    padding: 0.625rem 1rem;
   }
 
   .profile-header {
+    padding: 1rem;
+  }
+
+  .profile-header-content {
     flex-direction: column;
     text-align: center;
-    gap: 0.875rem;
   }
 
   .profile-name-section {
     width: 100%;
+  }
+
+  .profile-content {
+    padding: 1rem;
+    padding-top: 0.75rem;
   }
 
   .record-item {
@@ -346,11 +471,6 @@ h1 {
 
   .record-key {
     min-width: auto;
-    font-size: 0.75rem;
-  }
-
-  .record-value {
-    font-size: 0.8rem;
   }
 }
 
@@ -360,12 +480,13 @@ h1 {
     padding: 1rem 0.75rem;
   }
 
-  .profile-card {
+  .profile-header,
+  .profile-content {
     padding: 0.875rem;
   }
 
   .address {
-    padding: 0.625rem 0.75rem;
+    padding: 0.5rem 0.625rem;
     font-size: 0.6rem;
   }
 }
