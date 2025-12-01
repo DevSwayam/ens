@@ -1,6 +1,5 @@
 import { Response } from 'express';
-import { ApiResponse, ApiSuccessResponse, ApiErrorResponse } from '../types/api';
-import { HttpStatus } from '../types/api';
+import { ApiSuccessResponse, ApiErrorResponse, HttpStatus } from '../types/api';
 
 /**
  * Send a successful API response

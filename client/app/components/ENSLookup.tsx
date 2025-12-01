@@ -35,6 +35,9 @@ const TEXT_RECORD_KEYS = [
   'location',
 ]
 
+// Default avatar as base64 data URI
+const DEFAULT_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAADy0lEQVR4AeycPY7UQBCFzZyAiLsRIBFDTsYhEOIEBByGEIlDEHGDRR04sbDa41fd9dMfUms0Y1fVq/c+nMzuPj5/+vminN+/3r8oR5ldoVbxrtWqHjw2/i3tAAAsHf+2AQAALO7A4uvzBACAxR1YfH2eAIsCsK8NALsTi74CwKLB72sDwO7Eoq8AsGjw+9oAsDux6CsALBr8vjYA7E4s+goAiwV/XPfx9t23TTnHhs++V2a32mfnWd/fNChH1aPMbrU8AdQEktcDQPIAVfkAoDqYvB4AkgeoygcA1cHk9QCQPEBVPgCoDiapP5MJAGfOLPI5ACwS9NmaAHDmzCKfA8AiQZ+tCQBnzizyOQAsEvTZmgBw5swinwNA8aB76z1+fP+4Kac3oHddmd1q23fanqdpUE7Pn951ZXar5QnQc7j4dQAoHnBvPQDoOVT8OgAUD7i3HgD0HCp+HQCKB9xbDwB6DiW9flU2AFx1quh9AFA02KtrAcBVp4reBwBFg726FgBcdarofQBQNNirawHAVaeK3gcAxYJ9dh33vw/wrODj/e07bc9z1DP7vfqzEDwBZicWbB4ABAtkthwAmO14sHkAECyQ2XIAYLbjweYBQLBAZssBgNmOD5p3ty0A3HWuSB0AFAny7hoAcNe5InUAUCTIu2sAwF3nitQBQJEg764BAHedK1IHAMmDVOU/3rx+tSlHFaB+n529XvVPya7V8gRQE0heDwDJA1TlA4DqYPJ6AEgeoCofAFQHk9cDQPIAVfkAoDroVG81FgCsnEzaBwCSBmclGwCsnEzaBwCSBmclGwCsnEzaBwCSBmclGwCsnEzaBwCSBWct9/Hn78umnPadsnI8f7c/wmzFu1arZNdqeQJY/5dK1g8AkgVmLRcArB1N1g8AkgVmLRcArB1N1g8AkgVmLRcArB0d1G9UWwAY5WySvgCQJKhRMgFglLNJ+gJAkqBGyQSAUc4m6QsASYIaJRMARjmbpC8ABA9qtDwZgC9fP2zKGb1g9P6Kd61W3U8GQBVAva8DAODrv/t0AHCPwFcAAPj67z4dANwj8BUAAL7+u08HAPcI/i9g1qcAMMvpoHMAIGgws2QBwCyng84BgKDBzJIFALOcDjoHAIIGM0sWAMxyOugcAAgWzGw5MgDef69/tmHHedn3lwE4GsL7XA4AQK68zNUCgLmluRoCQK68zNUCgLmluRoCQK68zNUCgLml9xp6VQGAl/NB5gJAkCC8ZACAl/NB5gJAkCC8ZACAl/NB5gJAkCC8ZACAl/NB5gKAcxDe4/8BAAD///YpzMYAAAAGSURBVAMAq2hb3cvhRQQAAAAASUVORK5CYII='
+
 export default function ENSLookup() {
   const searchParams = useSearchParams()
   const [ensName, setEnsName] = useState('')
@@ -182,13 +185,7 @@ export default function ENSLookup() {
         <div className="profile-card">
           <div className="profile-header">
             <div className="profile-header-content">
-              {profile.avatar ? (
-                <img src={profile.avatar} alt={profile.name} className="profile-avatar" />
-              ) : (
-                <div className="profile-avatar-placeholder">
-                  {profile.name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              <img src={profile.avatar || DEFAULT_AVATAR} alt={profile.name} className="profile-avatar" />
               <div className="profile-name-section">
                 <h2 className="profile-name">{profile.name}</h2>
                 {profile.records.name && (

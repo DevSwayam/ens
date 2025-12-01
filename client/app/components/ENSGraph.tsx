@@ -45,11 +45,8 @@ const hashString = (str: string): number => {
   return Math.abs(hash)
 }
 
-// Generate default avatar URL using UI Avatars service
-const getDefaultAvatar = (ensName: string): string => {
-  const name = ensName.replace('.eth', '')
-  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1a1a1a&color=fff&size=128&bold=true`
-}
+// Default avatar as base64 data URI
+const DEFAULT_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAADy0lEQVR4AeycPY7UQBCFzZyAiLsRIBFDTsYhEOIEBByGEIlDEHGDRR04sbDa41fd9dMfUms0Y1fVq/c+nMzuPj5/+vminN+/3r8oR5ldoVbxrtWqHjw2/i3tAAAsHf+2AQAALO7A4uvzBACAxR1YfH2eAIsCsK8NALsTi74CwKLB72sDwO7Eoq8AsGjw+9oAsDux6CsALBr8vjYA7E4s+goAiwV/XPfx9t23TTnHhs++V2a32mfnWd/fNChH1aPMbrU8AdQEktcDQPIAVfkAoDqYvB4AkgeoygcA1cHk9QCQPEBVPgCoDiapP5MJAGfOLPI5ACwS9NmaAHDmzCKfA8AiQZ+tCQBnzizyOQAsEvTZmgBw5swinwNA8aB76z1+fP+4Kac3oHddmd1q23fanqdpUE7Pn951ZXar5QnQc7j4dQAoHnBvPQDoOVT8OgAUD7i3HgD0HCp+HQCKB9xbDwB6DiW9flU2AFx1quh9AFA02KtrAcBVp4reBwBFg726FgBcdarofQBQNNirawHAVaeK3gcAxYJ9dh33vw/wrODj/e07bc9z1DP7vfqzEDwBZicWbB4ABAtkthwAmO14sHkAECyQ2XIAYLbjweYBQLBAZssBgNmOD5p3ty0A3HWuSB0AFAny7hoAcNe5InUAUCTIu2sAwF3nitQBQJEg764BAHedK1IHAMmDVOU/3rx+tSlHFaB+n529XvVPya7V8gRQE0heDwDJA1TlA4DqYPJ6AEgeoCofAFQHk9cDQPIAVfkAoDroVG81FgCsnEzaBwCSBmclGwCsnEzaBwCSBmclGwCsnEzaBwCSBmclGwCsnEzaBwCSBWct9/Hn78umnPadsnI8f7c/wmzFu1arZNdqeQJY/5dK1g8AkgVmLRcArB1N1g8AkgVmLRcArB1N1g8AkgVmLRcArB0d1G9UWwAY5WySvgCQJKhRMgFglLNJ+gJAkqBGyQSAUc4m6QsASYIaJRMARjmbpC8ABA9qtDwZgC9fP2zKGb1g9P6Kd61W3U8GQBVAva8DAODrv/t0AHCPwFcAAPj67z4dANwj8BUAAL7+u08HAPcI/i9g1qcAMMvpoHMAIGgws2QBwCyng84BgKDBzJIFALOcDjoHAIIGM0sWAMxyOugcAAgWzGw5MgDef69/tmHHedn3lwE4GsL7XA4AQK68zNUCgLmluRoCQK68zNUCgLmluRoCQK68zNUCgLml9xp6VQGAl/NB5gJAkCC8ZACAl/NB5gJAkCC8ZACAl/NB5gJAkCC8ZACAl/NB5gKAcxDe4/8BAAD///YpzMYAAAAGSURBVAMAq2hb3cvhRQQAAAAASUVORK5CYII='
 
 export default function ENSGraph() {
   const router = useRouter()
@@ -96,11 +93,11 @@ export default function ENSGraph() {
     const fetchAllAvatars = async () => {
       const allNames = new Set<string>()
       pairs.forEach(([source, target]) => {
-        allNames.add(source)
-        allNames.add(target)
+        if (source) allNames.add(source)
+        if (target) allNames.add(target)
       })
 
-      const namesToFetch = Array.from(allNames).filter(name => !(name in avatarCache))
+      const namesToFetch = Array.from(allNames).filter(name => name && !(name in avatarCache))
 
       if (namesToFetch.length === 0) return
 
@@ -137,8 +134,8 @@ export default function ENSGraph() {
 
     // Process pairs to build nodes and edges
     pairs.forEach(([source, target]) => {
-      // Add nodes
-      if (!nodeMap.has(source)) {
+      // Add source node
+      if (source && !nodeMap.has(source)) {
         const nodeHash = hashString(source)
         const nodeOpacity = 0.5 + (nodeHash % 30) / 100
         const avatar = avatarCache[source]
@@ -148,7 +145,7 @@ export default function ENSGraph() {
           label: source,
           title: source,
           shape: 'circularImage',
-          image: avatar || getDefaultAvatar(source),
+          image: avatar || DEFAULT_AVATAR,
           size: 28 + (nodeHash % 6),
           color: {
             background: primaryColorWithOpacity(nodeOpacity),
@@ -161,7 +158,8 @@ export default function ENSGraph() {
         })
       }
 
-      if (!nodeMap.has(target)) {
+      // Add target node (only if target exists - not a standalone node)
+      if (target && !nodeMap.has(target)) {
         const nodeHash = hashString(target)
         const nodeOpacity = 0.5 + (nodeHash % 30) / 100
         const avatar = avatarCache[target]
@@ -171,7 +169,7 @@ export default function ENSGraph() {
           label: target,
           title: target,
           shape: 'circularImage',
-          image: avatar || getDefaultAvatar(target),
+          image: avatar || DEFAULT_AVATAR,
           size: 28 + (nodeHash % 6),
           color: {
             background: primaryColorWithOpacity(nodeOpacity),
@@ -184,27 +182,29 @@ export default function ENSGraph() {
         })
       }
 
-      // Add edge (use sorted key to prevent duplicates)
-      const edgeKey = [source, target].sort().join('|')
-      if (!edgeSet.has(edgeKey)) {
-        edgeSet.add(edgeKey)
-        const edgeHash = hashString(edgeKey)
-        const edgeOpacity = 0.15 + (edgeHash % 20) / 100
+      // Add edge only if both source and target exist (not a standalone node)
+      if (source && target) {
+        const edgeKey = [source, target].sort().join('|')
+        if (!edgeSet.has(edgeKey)) {
+          edgeSet.add(edgeKey)
+          const edgeHash = hashString(edgeKey)
+          const edgeOpacity = 0.15 + (edgeHash % 20) / 100
 
-        edges.push({
-          from: source,
-          to: target,
-          color: {
-            color: primaryColorWithOpacity(edgeOpacity),
-            highlight: primaryColorWithOpacity(0.6),
-            hover: primaryColorWithOpacity(0.5),
-          },
-          width: 1.2,
-          smooth: {
-            type: 'curvedCW',
-            roundness: 0.2,
-          },
-        })
+          edges.push({
+            from: source,
+            to: target,
+            color: {
+              color: primaryColorWithOpacity(edgeOpacity),
+              highlight: primaryColorWithOpacity(0.6),
+              hover: primaryColorWithOpacity(0.5),
+            },
+            width: 1.2,
+            smooth: {
+              type: 'curvedCW',
+              roundness: 0.2,
+            },
+          })
+        }
       }
     })
 
@@ -299,22 +299,49 @@ export default function ENSGraph() {
   }), [handleNodeClick])
 
   const handleAddPair = useCallback(() => {
-    const parts = pairInput.split(',').map((s) => s.trim().toLowerCase())
-    if (parts.length === 2 && parts[0] && parts[1]) {
-      const ens1 = parts[0].endsWith('.eth') ? parts[0] : `${parts[0]}.eth`
-      const ens2 = parts[1].endsWith('.eth') ? parts[1] : `${parts[1]}.eth`
+    const parts = pairInput
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter((s) => s.length > 0)
+      .map((s) => (s.endsWith('.eth') ? s : `${s}.eth`))
 
-      // Check if this exact pair already exists
-      const pairExists = pairs.some(([a, b]) =>
-        (a === ens1 && b === ens2) || (a === ens2 && b === ens1)
-      )
+    if (parts.length === 0) return
 
-      if (!pairExists) {
-        setPairs((prev) => [...prev, [ens1, ens2]])
-        setGraphKey(k => k + 1)
+    const newPairs: string[][] = []
+
+    if (parts.length === 1) {
+      // Single name - add as standalone node (empty second element)
+      const ens = parts[0]
+      const alreadyExists = pairs.some(([a, b]) => a === ens || b === ens)
+      if (!alreadyExists) {
+        newPairs.push([ens, ''])
       }
-      setPairInput('')
+    } else {
+      // Multiple names - create all pairwise connections
+      for (let i = 0; i < parts.length; i++) {
+        for (let j = i + 1; j < parts.length; j++) {
+          const ens1 = parts[i]
+          const ens2 = parts[j]
+
+          // Check if this exact pair already exists
+          const pairExists = pairs.some(([a, b]) =>
+            (a === ens1 && b === ens2) || (a === ens2 && b === ens1)
+          )
+
+          if (!pairExists && !newPairs.some(([a, b]) =>
+            (a === ens1 && b === ens2) || (a === ens2 && b === ens1)
+          )) {
+            newPairs.push([ens1, ens2])
+          }
+        }
+      }
     }
+
+    if (newPairs.length > 0) {
+      setPairs((prev) => [...prev, ...newPairs])
+      setGraphKey(k => k + 1)
+    }
+    setPairInput('')
   }, [pairInput, pairs])
 
   const handleKeyDown = useCallback(
@@ -451,12 +478,12 @@ export default function ENSGraph() {
               value={pairInput}
               onChange={(e) => setPairInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="vitalik, swayam"
+              placeholder="vitalik, nick, brantly..."
               className="search-input"
             />
           </div>
           <button onClick={handleAddPair} className="search-button">
-            Add Connection
+            Add
           </button>
         </div>
 
@@ -471,17 +498,20 @@ export default function ENSGraph() {
 
         {pairs.length > 0 && (
           <div className="pairs-list">
-            <h4>Connections ({pairs.length})</h4>
+            <h4>Nodes & Connections ({pairs.length})</h4>
             <div className="pairs-grid">
               {pairs.map((pair, i) => (
                 <div key={`${pair[0]}-${pair[1]}-${i}`} className="pair-tag">
                   <span>
-                    {pair[0].replace('.eth', '')} ↔ {pair[1].replace('.eth', '')}
+                    {pair[1]
+                      ? `${pair[0].replace('.eth', '')} ↔ ${pair[1].replace('.eth', '')}`
+                      : pair[0].replace('.eth', '')
+                    }
                   </span>
                   <button
                     onClick={() => handleRemovePair(i)}
                     className="remove-pair"
-                    aria-label="Remove pair"
+                    aria-label="Remove"
                   >
                     ×
                   </button>
@@ -602,6 +632,49 @@ export default function ENSGraph() {
         @keyframes pulse {
           0%, 100% { opacity: 1; }
           50% { opacity: 0.6; }
+        }
+
+        /* Mobile responsive styles */
+        @media (max-width: 640px) {
+          .graph-controls-overlay {
+            bottom: 0.5rem;
+            right: 0.5rem;
+          }
+
+          .control-toggle {
+            width: 40px;
+            height: 40px;
+            font-size: 1.1rem;
+          }
+
+          .control-panel {
+            padding: 0.5rem;
+            border-radius: 10px;
+          }
+
+          .control-btn {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            min-height: 36px;
+          }
+
+          .loading-overlay {
+            font-size: 0.7rem;
+            padding: 0.4rem 0.75rem;
+          }
+        }
+
+        /* Touch device optimizations */
+        @media (pointer: coarse) {
+          .control-toggle {
+            width: 48px;
+            height: 48px;
+          }
+
+          .control-btn {
+            min-height: 44px;
+            padding: 0.75rem 1rem;
+          }
         }
       `}</style>
     </div>
