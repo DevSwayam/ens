@@ -128,6 +128,8 @@ export default function ENSLookup() {
     return `${trimmed}.eth`
   }
 
+  const showSuffix = !ensName.toLowerCase().endsWith('.eth')
+
   return (
     <div className="ens-lookup">
       <form onSubmit={handleSubmit} className="search-form">
@@ -135,11 +137,11 @@ export default function ENSLookup() {
           <input
             type="text"
             value={ensName}
-            onChange={(e) => setEnsName(e.target.value.replace(/\.eth$/i, ''))}
+            onChange={(e) => setEnsName(e.target.value)}
             placeholder="vitalik"
             className="search-input"
           />
-          <span className="search-input-suffix">.eth</span>
+          {showSuffix && <span className="search-input-suffix">.eth</span>}
         </div>
         <button type="submit" disabled={loading} className="search-button">
           {loading ? 'Looking up...' : 'Lookup'}
