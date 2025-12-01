@@ -14,8 +14,10 @@ export function sendSuccess<T>(
   const response: ApiSuccessResponse<T> = {
     success: true,
     data,
-    ...(message && { message }),
   };
+  if (message !== undefined) {
+    response.message = message;
+  }
   res.status(statusCode).json(response);
 }
 
@@ -32,9 +34,13 @@ export function sendError(
   const response: ApiErrorResponse = {
     success: false,
     error,
-    ...(details && { details }),
-    ...(code && { code }),
   };
+  if (details !== undefined) {
+    response.details = details;
+  }
+  if (code !== undefined) {
+    response.code = code;
+  }
   res.status(statusCode).json(response);
 }
 

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AppError } from '../utils/errors';
-import { sendError, HttpStatus } from '../utils/response';
+import { sendError } from '../utils/response';
+import { HttpStatus } from '../types/api';
 import { logger } from './logger';
 
 /**

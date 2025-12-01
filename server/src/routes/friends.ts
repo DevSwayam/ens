@@ -7,7 +7,8 @@ import {
 } from '../types/database';
 import { validateRequest } from '../middleware/validation';
 import { asyncHandler } from '../middleware/errorHandler';
-import { sendSuccess, HttpStatus } from '../utils/response';
+import { sendSuccess } from '../utils/response';
+import { HttpStatus } from '../types/api';
 
 const router: Router = Router();
 
@@ -55,8 +56,9 @@ router.get(
 router.post(
   '/add',
   validateRequest(addRelationshipSchema),
-  asyncHandler(async (req: Request & { validatedBody: FriendRelationshipInsert }, res: Response) => {
-    const relationship = await FriendService.addRelationship(req.validatedBody);
+  asyncHandler(async (req: Request, res: Response) => {
+    const validatedReq = req as Request & { validatedBody: FriendRelationshipInsert };
+    const relationship = await FriendService.addRelationship(validatedReq.validatedBody);
     sendSuccess(res, relationship, HttpStatus.CREATED, 'Friendship relationship created successfully');
   })
 );
@@ -68,8 +70,9 @@ router.post(
 router.delete(
   '/delete',
   validateRequest(deleteRelationshipSchema),
-  asyncHandler(async (req: Request & { validatedBody: FriendRelationshipDelete }, res: Response) => {
-    await FriendService.deleteRelationship(req.validatedBody);
+  asyncHandler(async (req: Request, res: Response) => {
+    const validatedReq = req as Request & { validatedBody: FriendRelationshipDelete };
+    await FriendService.deleteRelationship(validatedReq.validatedBody);
     sendSuccess(res, null, HttpStatus.OK, 'Friendship relationship deleted successfully');
   })
 );
