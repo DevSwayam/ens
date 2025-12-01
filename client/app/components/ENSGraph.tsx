@@ -139,7 +139,7 @@ export default function ENSGraph() {
 
         nodeMap.set(source, {
           id: source,
-          label: source.replace('.eth', ''),
+          label: source,
           title: source,
           shape: avatar ? 'circularImage' : 'dot',
           image: avatar || undefined,
@@ -162,7 +162,7 @@ export default function ENSGraph() {
 
         nodeMap.set(target, {
           id: target,
-          label: target.replace('.eth', ''),
+          label: target,
           title: target,
           shape: avatar ? 'circularImage' : 'dot',
           image: avatar || undefined,
