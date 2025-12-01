@@ -688,3 +688,13 @@ h1 {
     height: 50vh;
   }
 }
+
+/* Loading state */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}

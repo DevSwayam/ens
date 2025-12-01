@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import ENSGraph from '../components/ENSGraph'
 import Link from 'next/link'
 
@@ -11,7 +12,9 @@ export default function GraphPage() {
         <h1>ENS Network</h1>
         <p className="subtitle">Visualize connections between ENS names</p>
       </header>
-      <ENSGraph />
+      <Suspense fallback={<div className="loading">Loading graph...</div>}>
+        <ENSGraph />
+      </Suspense>
     </main>
   )
 }

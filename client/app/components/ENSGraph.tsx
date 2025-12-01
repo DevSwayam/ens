@@ -45,6 +45,12 @@ const hashString = (str: string): number => {
   return Math.abs(hash)
 }
 
+// Generate default avatar URL using UI Avatars service
+const getDefaultAvatar = (ensName: string): string => {
+  const name = ensName.replace('.eth', '')
+  return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1a1a1a&color=fff&size=128&bold=true`
+}
+
 export default function ENSGraph() {
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -141,8 +147,8 @@ export default function ENSGraph() {
           id: source,
           label: source,
           title: source,
-          shape: avatar ? 'circularImage' : 'dot',
-          image: avatar || undefined,
+          shape: 'circularImage',
+          image: avatar || getDefaultAvatar(source),
           size: 28 + (nodeHash % 6),
           color: {
             background: primaryColorWithOpacity(nodeOpacity),
@@ -164,8 +170,8 @@ export default function ENSGraph() {
           id: target,
           label: target,
           title: target,
-          shape: avatar ? 'circularImage' : 'dot',
-          image: avatar || undefined,
+          shape: 'circularImage',
+          image: avatar || getDefaultAvatar(target),
           size: 28 + (nodeHash % 6),
           color: {
             background: primaryColorWithOpacity(nodeOpacity),

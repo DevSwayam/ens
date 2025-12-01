@@ -5,6 +5,9 @@ import {
   FriendRelationshipInsert,
   FriendRelationshipDelete,
 } from '../types/database';
+import { validateRequest } from '../middleware/validation';
+import { asyncHandler } from '../middleware/errorHandler';
+import { sendSuccess, HttpStatus } from '../utils/response';
 
 const router: Router = Router();
 
@@ -25,133 +28,50 @@ const deleteRelationshipSchema = z.object({
  * GET /api/friends/graph
  * Get all relationships as graph data (nodes and edges)
  */
-router.get('/graph', async (_req: Request, res: Response) => {
-  try {
-    const result = await FriendService.getGraphData();
-
-    if (result.error) {
-      return res.status(500).json({
-        success: false,
-        error: result.error,
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: result.data,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
+router.get(
+  '/graph',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const graphData = await FriendService.getGraphData();
+    sendSuccess(res, graphData, HttpStatus.OK);
+  })
+);
 
 /**
  * GET /api/friends/relationships
  * Get all friend relationships
  */
-router.get('/relationships', async (_req: Request, res: Response) => {
-  try {
-    const result = await FriendService.getAllRelationships();
-
-    if (result.error) {
-      return res.status(500).json({
-        success: false,
-        error: result.error,
-      });
-    }
-
-    return res.json({
-      success: true,
-      data: result.data,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
+router.get(
+  '/relationships',
+  asyncHandler(async (_req: Request, res: Response) => {
+    const relationships = await FriendService.getAllRelationships();
+    sendSuccess(res, relationships, HttpStatus.OK);
+  })
+);
 
 /**
  * POST /api/friends/add
  * Add a new friend relationship (edge)
  */
-router.post('/add', async (req: Request, res: Response) => {
-  try {
-    // Validate request body
-    const validationResult = addRelationshipSchema.safeParse(req.body);
-
-    if (!validationResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid request data',
-        details: validationResult.error.errors,
-      });
-    }
-
-    const relationship: FriendRelationshipInsert = validationResult.data;
-    const result = await FriendService.addRelationship(relationship);
-
-    if (result.error) {
-      return res.status(400).json({
-        success: false,
-        error: result.error,
-      });
-    }
-
-    return res.status(201).json({
-      success: true,
-      data: result.data,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
+router.post(
+  '/add',
+  validateRequest(addRelationshipSchema),
+  asyncHandler(async (req: Request & { validatedBody: FriendRelationshipInsert }, res: Response) => {
+    const relationship = await FriendService.addRelationship(req.validatedBody);
+    sendSuccess(res, relationship, HttpStatus.CREATED, 'Friendship relationship created successfully');
+  })
+);
 
 /**
  * DELETE /api/friends/delete
  * Delete a friend relationship (edge)
  */
-router.delete('/delete', async (req: Request, res: Response) => {
-  try {
-    // Validate request body
-    const validationResult = deleteRelationshipSchema.safeParse(req.body);
-
-    if (!validationResult.success) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid request data',
-        details: validationResult.error.errors,
-      });
-    }
-
-    const relationship: FriendRelationshipDelete = validationResult.data;
-    const result = await FriendService.deleteRelationship(relationship);
-
-    if (result.error) {
-      return res.status(400).json({
-        success: false,
-        error: result.error,
-      });
-    }
-
-    return res.json({
-      success: true,
-      message: 'Friendship relationship deleted successfully',
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-});
+router.delete(
+  '/delete',
+  validateRequest(deleteRelationshipSchema),
+  asyncHandler(async (req: Request & { validatedBody: FriendRelationshipDelete }, res: Response) => {
+    await FriendService.deleteRelationship(req.validatedBody);
+    sendSuccess(res, null, HttpStatus.OK, 'Friendship relationship deleted successfully');
+  })
+);
 
 export default router;
-

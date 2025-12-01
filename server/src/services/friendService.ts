@@ -8,6 +8,8 @@ import {
   GraphData,
   DatabaseResponse,
 } from '../types/database';
+import { ConflictError, DatabaseError } from '../utils/errors';
+import { logger } from '../middleware/logger';
 
 /**
  * Service for managing friend relationships (edges) in the social network
@@ -16,7 +18,7 @@ export class FriendService {
   /**
    * Get all friend relationships
    */
-  static async getAllRelationships(): Promise<DatabaseResponse<FriendRelationship[]>> {
+  static async getAllRelationships(): Promise<FriendRelationship[]> {
     try {
       const { data, error } = await supabase
         .from(FRIENDS_TABLE)
@@ -24,15 +26,17 @@ export class FriendService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        return { data: null, error: error.message };
+        logger.error('Failed to fetch relationships', { error: error.message });
+        throw new DatabaseError('Failed to fetch friend relationships', error);
       }
 
-      return { data: data || [], error: null };
+      return data || [];
     } catch (err) {
-      return {
-        data: null,
-        error: err instanceof Error ? err.message : 'Unknown error occurred',
-      };
+      if (err instanceof DatabaseError) {
+        throw err;
+      }
+      logger.error('Unexpected error fetching relationships', { error: err });
+      throw new DatabaseError('Unexpected error occurred while fetching relationships');
     }
   }
 
@@ -41,14 +45,11 @@ export class FriendService {
    */
   static async addRelationship(
     relationship: FriendRelationshipInsert
-  ): Promise<DatabaseResponse<FriendRelationship>> {
+  ): Promise<FriendRelationship> {
     try {
       // Validate that user_id and friend_id are different
       if (relationship.user_id === relationship.friend_id) {
-        return {
-          data: null,
-          error: 'User cannot be friends with themselves',
-        };
+        throw new ConflictError('User cannot be friends with themselves');
       }
 
       // Check if relationship already exists (in either direction)
@@ -58,13 +59,10 @@ export class FriendService {
         .or(
           `and(user_id.eq.${relationship.user_id},friend_id.eq.${relationship.friend_id}),and(user_id.eq.${relationship.friend_id},friend_id.eq.${relationship.user_id})`
         )
-        .single();
+        .maybeSingle();
 
       if (existing) {
-        return {
-          data: null,
-          error: 'Friendship relationship already exists',
-        };
+        throw new ConflictError('Friendship relationship already exists');
       }
 
       const { data, error } = await supabase
@@ -77,15 +75,22 @@ export class FriendService {
         .single();
 
       if (error) {
-        return { data: null, error: error.message };
+        logger.error('Failed to add relationship', { error: error.message, relationship });
+        throw new DatabaseError('Failed to create friend relationship', error);
       }
 
-      return { data, error: null };
+      if (!data) {
+        throw new DatabaseError('Failed to create friend relationship: no data returned');
+      }
+
+      logger.info('Friend relationship created', { relationshipId: data.id });
+      return data;
     } catch (err) {
-      return {
-        data: null,
-        error: err instanceof Error ? err.message : 'Unknown error occurred',
-      };
+      if (err instanceof ConflictError || err instanceof DatabaseError) {
+        throw err;
+      }
+      logger.error('Unexpected error adding relationship', { error: err });
+      throw new DatabaseError('Unexpected error occurred while creating relationship');
     }
   }
 
@@ -94,7 +99,7 @@ export class FriendService {
    */
   static async deleteRelationship(
     relationship: FriendRelationshipDelete
-  ): Promise<DatabaseResponse<boolean>> {
+  ): Promise<void> {
     try {
       // Delete relationship in both directions (bidirectional friendship)
       const { error } = await supabase
@@ -105,15 +110,17 @@ export class FriendService {
         );
 
       if (error) {
-        return { data: null, error: error.message };
+        logger.error('Failed to delete relationship', { error: error.message, relationship });
+        throw new DatabaseError('Failed to delete friend relationship', error);
       }
 
-      return { data: true, error: null };
+      logger.info('Friend relationship deleted', { relationship });
     } catch (err) {
-      return {
-        data: null,
-        error: err instanceof Error ? err.message : 'Unknown error occurred',
-      };
+      if (err instanceof DatabaseError) {
+        throw err;
+      }
+      logger.error('Unexpected error deleting relationship', { error: err });
+      throw new DatabaseError('Unexpected error occurred while deleting relationship');
     }
   }
 
@@ -149,18 +156,9 @@ export class FriendService {
   /**
    * Get graph data (all relationships converted to graph format)
    */
-  static async getGraphData(): Promise<DatabaseResponse<GraphData>> {
-    const relationshipsResponse = await this.getAllRelationships();
-
-    if (relationshipsResponse.error || !relationshipsResponse.data) {
-      return {
-        data: null,
-        error: relationshipsResponse.error || 'Failed to fetch relationships',
-      };
-    }
-
-    const graphData = this.relationshipsToGraph(relationshipsResponse.data);
-    return { data: graphData, error: null };
+  static async getGraphData(): Promise<GraphData> {
+    const relationships = await this.getAllRelationships();
+    return this.relationshipsToGraph(relationships);
   }
 }
 

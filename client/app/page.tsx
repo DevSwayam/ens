@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import ENSLookup from './components/ENSLookup'
 import Link from 'next/link'
 
@@ -11,7 +12,9 @@ export default function Home() {
           View Network Graph →
         </Link>
       </header>
-      <ENSLookup />
+      <Suspense fallback={<div className="loading">Loading...</div>}>
+        <ENSLookup />
+      </Suspense>
     </main>
   )
 }
