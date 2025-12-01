@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import { normalize } from 'viem/ens'
@@ -35,14 +36,16 @@ const TEXT_RECORD_KEYS = [
 ]
 
 export default function ENSLookup() {
+  const searchParams = useSearchParams()
   const [ensName, setEnsName] = useState('')
   const [profile, setProfile] = useState<ENSProfile | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notRegistered, setNotRegistered] = useState<string | null>(null)
 
-  const lookupENS = async () => {
-    if (!ensName.trim()) return
+  const lookupENS = useCallback(async (nameToLookup?: string) => {
+    const name = nameToLookup || ensName
+    if (!name.trim()) return
 
     setLoading(true)
     setError(null)
@@ -50,9 +53,9 @@ export default function ENSLookup() {
     setNotRegistered(null)
 
     try {
-      const fullName = ensName.trim().toLowerCase().endsWith('.eth')
-        ? ensName.trim().toLowerCase()
-        : `${ensName.trim().toLowerCase()}.eth`
+      const fullName = name.trim().toLowerCase().endsWith('.eth')
+        ? name.trim().toLowerCase()
+        : `${name.trim().toLowerCase()}.eth`
       const normalizedName = normalize(fullName)
 
       // Fetch address first (required to continue)
@@ -93,7 +96,16 @@ export default function ENSLookup() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [ensName])
+
+  // Auto-lookup from URL params (when clicking from graph)
+  useEffect(() => {
+    const ensParam = searchParams.get('ens')
+    if (ensParam) {
+      setEnsName(ensParam)
+      lookupENS(ensParam)
+    }
+  }, [searchParams, lookupENS])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

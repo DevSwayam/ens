@@ -1,4 +1,5 @@
 import ENSLookup from './components/ENSLookup'
+import Link from 'next/link'
 
 export default function Home() {
   return (
@@ -6,6 +7,9 @@ export default function Home() {
       <header className="header">
         <h1>ENS Playground</h1>
         <p className="subtitle">Explore ENS names and view profile data from the Ethereum blockchain</p>
+        <Link href="/graph" className="nav-link">
+          View Network Graph →
+        </Link>
       </header>
       <ENSLookup />
     </main>
