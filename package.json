@@ -1,0 +1,19 @@
+{
+  "name": "ns-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Minimal monorepo with Next.js client and Express server",
+  "scripts": {
+    "dev": "pnpm --filter client dev & pnpm --filter server dev",
+    "build": "pnpm --filter client build && pnpm --filter server build",
+    "lint": "pnpm --filter client lint && pnpm --filter server lint"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
+
