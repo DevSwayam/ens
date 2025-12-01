@@ -11,6 +11,7 @@
       "src": "/(.*)",
       "dest": "api/index.ts"
     }
-  ]
+  ],
+  "installCommand": "cd .. && pnpm install --no-frozen-lockfile"
 }
 
