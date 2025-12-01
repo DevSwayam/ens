@@ -15,7 +15,7 @@ if (process.env.NODE_ENV !== 'production') {
  */
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.string().regex(/^\d+$/).transform(Number).default('3001'),
+  PORT: z.string().regex(/^\d+$/).transform(Number).default('3002'),
   SUPABASE_URL: z.string().url('SUPABASE_URL must be a valid URL'),
   SUPABASE_ANON_KEY: z.string().min(1, 'SUPABASE_ANON_KEY is required'),
   CORS_ORIGIN: z.string().optional(),

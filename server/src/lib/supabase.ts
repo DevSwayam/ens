@@ -11,7 +11,8 @@ export const supabase: SupabaseClient = createClient(
 );
 
 /**
- * Database table name for friend relationships
+ * Database table names (normalized schema)
  */
-export const FRIENDS_TABLE = 'friend_relationships';
+export const NODES_TABLE = 'nodes';
+export const RELATIONSHIPS_TABLE = 'relationships';
 

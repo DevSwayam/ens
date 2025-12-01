@@ -25,6 +25,8 @@ client/.vercel/
 # Production builds
 client/dist/
 server/dist/
+server/api/*.js
+server/api/*.js.map
 *.tsbuildinfo
 
 # Environment variables

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import { normalize } from 'viem/ens'
+import { useFriends } from '@/hooks/useFriends'
 
 const Graph = dynamic(() => import('react-graph-vis'), {
   ssr: false,
@@ -48,17 +49,50 @@ const hashString = (str: string): number => {
 // Default avatar as base64 data URI
 const DEFAULT_AVATAR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAADy0lEQVR4AeycPY7UQBCFzZyAiLsRIBFDTsYhEOIEBByGEIlDEHGDRR04sbDa41fd9dMfUms0Y1fVq/c+nMzuPj5/+vminN+/3r8oR5ldoVbxrtWqHjw2/i3tAAAsHf+2AQAALO7A4uvzBACAxR1YfH2eAIsCsK8NALsTi74CwKLB72sDwO7Eoq8AsGjw+9oAsDux6CsALBr8vjYA7E4s+goAiwV/XPfx9t23TTnHhs++V2a32mfnWd/fNChH1aPMbrU8AdQEktcDQPIAVfkAoDqYvB4AkgeoygcA1cHk9QCQPEBVPgCoDiapP5MJAGfOLPI5ACwS9NmaAHDmzCKfA8AiQZ+tCQBnzizyOQAsEvTZmgBw5swinwNA8aB76z1+fP+4Kac3oHddmd1q23fanqdpUE7Pn951ZXar5QnQc7j4dQAoHnBvPQDoOVT8OgAUD7i3HgD0HCp+HQCKB9xbDwB6DiW9flU2AFx1quh9AFA02KtrAcBVp4reBwBFg726FgBcdarofQBQNNirawHAVaeK3gcAxYJ9dh33vw/wrODj/e07bc9z1DP7vfqzEDwBZicWbB4ABAtkthwAmO14sHkAECyQ2XIAYLbjweYBQLBAZssBgNmOD5p3ty0A3HWuSB0AFAny7hoAcNe5InUAUCTIu2sAwF3nitQBQJEg764BAHedK1IHAMmDVOU/3rx+tSlHFaB+n529XvVPya7V8gRQE0heDwDJA1TlA4DqYPJ6AEgeoCofAFQHk9cDQPIAVfkAoDroVG81FgCsnEzaBwCSBmclGwCsnEzaBwCSBmclGwCsnEzaBwCSBmclGwCsnEzaBwCSBWct9/Hn78umnPadsnI8f7c/wmzFu1arZNdqeQJY/5dK1g8AkgVmLRcArB1N1g8AkgVmLRcArB1N1g8AkgVmLRcArB0d1G9UWwAY5WySvgCQJKhRMgFglLNJ+gJAkqBGyQSAUc4m6QsASYIaJRMARjmbpC8ABA9qtDwZgC9fP2zKGb1g9P6Kd61W3U8GQBVAva8DAODrv/t0AHCPwFcAAPj67z4dANwj8BUAAL7+u08HAPcI/i9g1qcAMMvpoHMAIGgws2QBwCyng84BgKDBzJIFALOcDjoHAIIGM0sWAMxyOugcAAgWzGw5MgDef69/tmHHedn3lwE4GsL7XA4AQK68zNUCgLmluRoCQK68zNUCgLmluRoCQK68zNUCgLml9xp6VQGAl/NB5gJAkCC8ZACAl/NB5gJAkCC8ZACAl/NB5gJAkCC8ZACAl/NB5gKAcxDe4/8BAAD///YpzMYAAAAGSURBVAMAq2hb3cvhRQQAAAAASUVORK5CYII='
 
+// Format time since (e.g., "2 days", "3 months")
+const formatTimeSince = (dateString: string): string => {
+  const date = new Date(dateString)
+  const now = new Date()
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+  const intervals = [
+    { label: 'year', seconds: 31536000 },
+    { label: 'month', seconds: 2592000 },
+    { label: 'week', seconds: 604800 },
+    { label: 'day', seconds: 86400 },
+    { label: 'hour', seconds: 3600 },
+    { label: 'minute', seconds: 60 },
+  ]
+
+  for (const interval of intervals) {
+    const count = Math.floor(seconds / interval.seconds)
+    if (count >= 1) {
+      return `${count} ${interval.label}${count > 1 ? 's' : ''}`
+    }
+  }
+  return 'just now'
+}
+
 export default function ENSGraph() {
   const router = useRouter()
   const containerRef = useRef<HTMLDivElement>(null)
   const [dimensions, setDimensions] = useState({ width: 800, height: 600 })
   const [pairInput, setPairInput] = useState('')
-  const [pairs, setPairs] = useState<string[][]>(SAMPLE_PAIRS)
   const [network, setNetwork] = useState<any>(null)
   const [showControls, setShowControls] = useState(false)
   const [avatarCache, setAvatarCache] = useState<AvatarCache>({})
   const [loadingAvatars, setLoadingAvatars] = useState(false)
   const [graphKey, setGraphKey] = useState(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // Use the friends API hook
+  const { graphData: serverGraphData, loading: apiLoading, error: apiError, isDbError, addRelationshipsBatch, addNodesBatch, deleteRelationship, refetch } = useFriends()
+
+  // Convert server graph data to pairs format for display
+  const pairs = useMemo(() => {
+    if (!serverGraphData) return []
+    return serverGraphData.edges.map(edge => [edge.from, edge.to])
+  }, [serverGraphData])
 
   // Fetch ENS avatar
   const fetchAvatar = useCallback(async (ensName: string): Promise<string | null> => {
@@ -88,13 +122,14 @@ export default function ENSGraph() {
     return () => window.removeEventListener('resize', updateDimensions)
   }, [])
 
-  // Fetch avatars for all ENS names
+  // Fetch avatars for all ENS names from server data
   useEffect(() => {
     const fetchAllAvatars = async () => {
+      if (!serverGraphData) return
+
       const allNames = new Set<string>()
-      pairs.forEach(([source, target]) => {
-        if (source) allNames.add(source)
-        if (target) allNames.add(target)
+      serverGraphData.nodes.forEach(node => {
+        if (node.id) allNames.add(node.id)
       })
 
       const namesToFetch = Array.from(allNames).filter(name => name && !(name in avatarCache))
@@ -124,95 +159,61 @@ export default function ENSGraph() {
     }
 
     fetchAllAvatars()
-  }, [pairs, fetchAvatar])
+  }, [serverGraphData, fetchAvatar])
 
-  // Build graph data from pairs
+  // Build graph data for vis-network from server data
   const graphData = useMemo(() => {
-    const nodeMap = new Map<string, any>()
-    const edgeSet = new Set<string>()
-    const edges: any[] = []
+    if (!serverGraphData) return { nodes: [], edges: [] }
 
-    // Process pairs to build nodes and edges
-    pairs.forEach(([source, target]) => {
-      // Add source node
-      if (source && !nodeMap.has(source)) {
-        const nodeHash = hashString(source)
-        const nodeOpacity = 0.5 + (nodeHash % 30) / 100
-        const avatar = avatarCache[source]
+    const nodes = serverGraphData.nodes.map(node => {
+      const nodeHash = hashString(node.id)
+      const nodeOpacity = 0.5 + (nodeHash % 30) / 100
+      const avatar = avatarCache[node.id]
 
-        nodeMap.set(source, {
-          id: source,
-          label: source,
-          title: source,
-          shape: 'circularImage',
-          image: avatar || DEFAULT_AVATAR,
-          size: 28 + (nodeHash % 6),
-          color: {
-            background: primaryColorWithOpacity(nodeOpacity),
-            border: primaryColorWithOpacity(0.8),
-            highlight: {
-              background: PRIMARY_COLOR,
-              border: PRIMARY_COLOR,
-            },
+      return {
+        id: node.id,
+        label: node.id,
+        title: node.id,
+        shape: 'circularImage',
+        image: avatar || DEFAULT_AVATAR,
+        size: 28 + (nodeHash % 6),
+        color: {
+          background: primaryColorWithOpacity(nodeOpacity),
+          border: primaryColorWithOpacity(0.8),
+          highlight: {
+            background: PRIMARY_COLOR,
+            border: PRIMARY_COLOR,
           },
-        })
-      }
-
-      // Add target node (only if target exists - not a standalone node)
-      if (target && !nodeMap.has(target)) {
-        const nodeHash = hashString(target)
-        const nodeOpacity = 0.5 + (nodeHash % 30) / 100
-        const avatar = avatarCache[target]
-
-        nodeMap.set(target, {
-          id: target,
-          label: target,
-          title: target,
-          shape: 'circularImage',
-          image: avatar || DEFAULT_AVATAR,
-          size: 28 + (nodeHash % 6),
-          color: {
-            background: primaryColorWithOpacity(nodeOpacity),
-            border: primaryColorWithOpacity(0.8),
-            highlight: {
-              background: PRIMARY_COLOR,
-              border: PRIMARY_COLOR,
-            },
-          },
-        })
-      }
-
-      // Add edge only if both source and target exist (not a standalone node)
-      if (source && target) {
-        const edgeKey = [source, target].sort().join('|')
-        if (!edgeSet.has(edgeKey)) {
-          edgeSet.add(edgeKey)
-          const edgeHash = hashString(edgeKey)
-          const edgeOpacity = 0.15 + (edgeHash % 20) / 100
-
-          edges.push({
-            from: source,
-            to: target,
-            color: {
-              color: primaryColorWithOpacity(edgeOpacity),
-              highlight: primaryColorWithOpacity(0.6),
-              hover: primaryColorWithOpacity(0.5),
-            },
-            width: 1.2,
-            smooth: {
-              type: 'curvedCW',
-              roundness: 0.2,
-            },
-          })
-        }
+        },
       }
     })
 
-    return {
-      nodes: Array.from(nodeMap.values()),
-      edges,
-    }
-  }, [pairs, avatarCache])
+    const edges = serverGraphData.edges.map(edge => {
+      const edgeKey = [edge.from, edge.to].sort().join('|')
+      const edgeHash = hashString(edgeKey)
+      const edgeOpacity = 0.15 + (edgeHash % 20) / 100
+      const friendsSince = edge.created_at ? formatTimeSince(edge.created_at) : null
+
+      return {
+        id: edge.id,
+        from: edge.from,
+        to: edge.to,
+        title: friendsSince ? `Friends for ${friendsSince}` : undefined,
+        color: {
+          color: primaryColorWithOpacity(edgeOpacity),
+          highlight: primaryColorWithOpacity(0.6),
+          hover: primaryColorWithOpacity(0.5),
+        },
+        width: 1.2,
+        smooth: {
+          type: 'curvedCW',
+          roundness: 0.2,
+        },
+      }
+    })
+
+    return { nodes, edges }
+  }, [serverGraphData, avatarCache])
 
   const options = useMemo(() => ({
     nodes: {
@@ -280,8 +281,6 @@ export default function ENSGraph() {
       hideEdgesOnZoom: false,
       navigationButtons: false,
       keyboard: { enabled: false },
-      minZoom: 0.2,
-      maxZoom: 3,
     },
     layout: {
       improvedLayout: true,
@@ -305,51 +304,45 @@ export default function ENSGraph() {
     click: handleNodeClick,
   }), [handleNodeClick])
 
-  const handleAddPair = useCallback(() => {
+  // Add relationships or standalone nodes via API (single batch request)
+  const handleAddPair = useCallback(async () => {
+    if (isSubmitting) return
+
     const parts = pairInput
       .split(',')
       .map((s) => s.trim().toLowerCase())
       .filter((s) => s.length > 0)
       .map((s) => (s.endsWith('.eth') ? s : `${s}.eth`))
 
-    if (parts.length === 0) return
+    if (parts.length === 0) {
+      setPairInput('')
+      return
+    }
 
-    const newPairs: string[][] = []
+    setIsSubmitting(true)
 
-    if (parts.length === 1) {
-      // Single name - add as standalone node (empty second element)
-      const ens = parts[0]
-      const alreadyExists = pairs.some(([a, b]) => a === ens || b === ens)
-      if (!alreadyExists) {
-        newPairs.push([ens, ''])
-      }
-    } else {
-      // Multiple names - create all pairwise connections
-      for (let i = 0; i < parts.length; i++) {
-        for (let j = i + 1; j < parts.length; j++) {
-          const ens1 = parts[i]
-          const ens2 = parts[j]
-
-          // Check if this exact pair already exists
-          const pairExists = pairs.some(([a, b]) =>
-            (a === ens1 && b === ens2) || (a === ens2 && b === ens1)
-          )
-
-          if (!pairExists && !newPairs.some(([a, b]) =>
-            (a === ens1 && b === ens2) || (a === ens2 && b === ens1)
-          )) {
-            newPairs.push([ens1, ens2])
+    try {
+      if (parts.length === 1) {
+        // Single name: add as standalone node
+        await addNodesBatch(parts)
+      } else {
+        // Multiple names: create pairwise relationships
+        const relationships: { user_id: string; friend_id: string }[] = []
+        for (let i = 0; i < parts.length; i++) {
+          for (let j = i + 1; j < parts.length; j++) {
+            relationships.push({ user_id: parts[i], friend_id: parts[j] })
           }
         }
+        await addRelationshipsBatch(relationships)
       }
-    }
-
-    if (newPairs.length > 0) {
-      setPairs((prev) => [...prev, ...newPairs])
       setGraphKey(k => k + 1)
+    } catch (err) {
+      console.error('Failed to add:', err)
+    } finally {
+      setIsSubmitting(false)
+      setPairInput('')
     }
-    setPairInput('')
-  }, [pairInput, pairs])
+  }, [pairInput, isSubmitting, addRelationshipsBatch, addNodesBatch])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -361,21 +354,74 @@ export default function ENSGraph() {
     [handleAddPair]
   )
 
-  const handleRemovePair = useCallback((index: number) => {
-    setPairs((prev) => prev.filter((_, i) => i !== index))
-    setGraphKey(k => k + 1)
-  }, [])
+  // Delete relationship via API
+  const handleRemovePair = useCallback(async (index: number) => {
+    if (!serverGraphData || isSubmitting) return
 
-  const handleClearAll = useCallback(() => {
-    setPairs([])
-    setAvatarCache({})
-    setGraphKey(k => k + 1)
-  }, [])
+    const edge = serverGraphData.edges[index]
+    if (!edge) return
 
-  const handleLoadSample = useCallback(() => {
-    setPairs(SAMPLE_PAIRS)
-    setGraphKey(k => k + 1)
-  }, [])
+    setIsSubmitting(true)
+
+    try {
+      await deleteRelationship({
+        user_id: edge.from,
+        friend_id: edge.to,
+      })
+      setGraphKey(k => k + 1)
+    } catch (err) {
+      console.error('Failed to delete relationship:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [serverGraphData, isSubmitting, deleteRelationship])
+
+  // Clear all not supported in API - would need backend endpoint
+  const handleClearAll = useCallback(async () => {
+    if (!serverGraphData || isSubmitting) return
+
+    setIsSubmitting(true)
+
+    try {
+      // Delete all relationships one by one
+      for (const edge of serverGraphData.edges) {
+        try {
+          await deleteRelationship({
+            user_id: edge.from,
+            friend_id: edge.to,
+          })
+        } catch (err) {
+          console.log('Error deleting:', edge)
+        }
+      }
+      setAvatarCache({})
+      setGraphKey(k => k + 1)
+    } catch (err) {
+      console.error('Failed to clear all:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [serverGraphData, isSubmitting, deleteRelationship])
+
+  // Load sample data to database (single batch request)
+  const handleLoadSample = useCallback(async () => {
+    if (isSubmitting) return
+
+    setIsSubmitting(true)
+
+    try {
+      const relationships = SAMPLE_PAIRS.map(([from, to]) => ({
+        user_id: from,
+        friend_id: to,
+      }))
+      await addRelationshipsBatch(relationships)
+      setGraphKey(k => k + 1)
+    } catch (err) {
+      console.error('Failed to load sample data:', err)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }, [isSubmitting, addRelationshipsBatch])
 
   // Smoother zoom animations
   const handleFitAll = useCallback(() => {
@@ -417,9 +463,27 @@ export default function ENSGraph() {
 
   return (
     <div className="ens-graph">
+      {/* API Error Display */}
+      {apiError && (
+        <div className={`api-error ${isDbError ? 'db-error' : ''}`}>
+          {isDbError ? (
+            <div className="db-error-content">
+              <span>Database not set up yet.</span>
+              <p>Run the migration in Supabase SQL Editor:</p>
+              <code>server/supabase/migrations/001_create_friend_relationships.sql</code>
+            </div>
+          ) : (
+            <span>Server error: {apiError}</span>
+          )}
+          <button onClick={refetch} className="retry-btn">Retry</button>
+        </div>
+      )}
+
       {/* Graph Visualizer */}
       <div className="graph-container" ref={containerRef}>
-        {graphData.nodes.length > 0 ? (
+        {apiLoading ? (
+          <div className="graph-loading">Loading from server...</div>
+        ) : graphData.nodes.length > 0 ? (
           <>
             <Graph
               key={graphKey}
@@ -434,9 +498,9 @@ export default function ENSGraph() {
             />
 
             {/* Loading Indicator */}
-            {loadingAvatars && (
+            {(loadingAvatars || isSubmitting) && (
               <div className="loading-overlay">
-                <span>Loading avatars...</span>
+                <span>{isSubmitting ? 'Saving...' : 'Loading avatars...'}</span>
               </div>
             )}
 
@@ -467,8 +531,8 @@ export default function ENSGraph() {
         ) : (
           <div className="graph-empty">
             <p>Add ENS pairs to visualize the network</p>
-            <button onClick={handleLoadSample} className="search-button">
-              Load Sample Data
+            <button onClick={handleLoadSample} disabled={isSubmitting} className="search-button">
+              {isSubmitting ? 'Loading...' : 'Load Sample Data'}
             </button>
           </div>
         )}
@@ -487,36 +551,35 @@ export default function ENSGraph() {
               onKeyDown={handleKeyDown}
               placeholder="vitalik, nick, brantly..."
               className="search-input"
+              disabled={isSubmitting}
             />
           </div>
-          <button onClick={handleAddPair} className="search-button">
-            Add
+          <button onClick={handleAddPair} disabled={isSubmitting} className="search-button">
+            {isSubmitting ? '...' : 'Add'}
           </button>
         </div>
 
         <div className="graph-actions">
-          <button onClick={handleLoadSample} className="action-button secondary">
+          <button onClick={handleLoadSample} disabled={isSubmitting} className="action-button secondary">
             Load Sample
           </button>
-          <button onClick={handleClearAll} className="action-button muted">
+          <button onClick={handleClearAll} disabled={isSubmitting} className="action-button muted">
             Clear All
           </button>
         </div>
 
         {pairs.length > 0 && (
           <div className="pairs-list">
-            <h4>Nodes & Connections ({pairs.length})</h4>
+            <h4>Connections ({pairs.length})</h4>
             <div className="pairs-grid">
               {pairs.map((pair, i) => (
                 <div key={`${pair[0]}-${pair[1]}-${i}`} className="pair-tag">
                   <span>
-                    {pair[1]
-                      ? `${pair[0].replace('.eth', '')} ↔ ${pair[1].replace('.eth', '')}`
-                      : pair[0].replace('.eth', '')
-                    }
+                    {`${pair[0].replace('.eth', '')} ↔ ${pair[1].replace('.eth', '')}`}
                   </span>
                   <button
                     onClick={() => handleRemovePair(i)}
+                    disabled={isSubmitting}
                     className="remove-pair"
                     aria-label="Remove"
                   >
@@ -555,6 +618,67 @@ export default function ENSGraph() {
           justify-content: center;
           height: 100%;
           color: rgba(255, 255, 255, 0.6);
+        }
+
+        .api-error {
+          background: rgba(239, 68, 68, 0.2);
+          border: 1px solid rgba(239, 68, 68, 0.5);
+          border-radius: 8px;
+          padding: 0.75rem 1rem;
+          margin-bottom: 1rem;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          font-size: 0.875rem;
+          color: #fca5a5;
+        }
+
+        .retry-btn {
+          background: rgba(239, 68, 68, 0.3);
+          border: 1px solid rgba(239, 68, 68, 0.5);
+          border-radius: 6px;
+          padding: 0.4rem 0.75rem;
+          color: white;
+          font-size: 0.75rem;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .retry-btn:hover {
+          background: rgba(239, 68, 68, 0.5);
+        }
+
+        .db-error {
+          background: rgba(251, 191, 36, 0.15);
+          border-color: rgba(251, 191, 36, 0.5);
+          color: #fcd34d;
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .db-error-content {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .db-error-content span {
+          font-weight: 500;
+        }
+
+        .db-error-content p {
+          font-size: 0.75rem;
+          margin: 0;
+          opacity: 0.8;
+        }
+
+        .db-error-content code {
+          font-size: 0.7rem;
+          background: rgba(0, 0, 0, 0.3);
+          padding: 0.25rem 0.5rem;
+          border-radius: 4px;
+          font-family: monospace;
         }
 
         .loading-overlay {
@@ -668,6 +792,12 @@ export default function ENSGraph() {
           .loading-overlay {
             font-size: 0.7rem;
             padding: 0.4rem 0.75rem;
+          }
+
+          .api-error {
+            flex-direction: column;
+            gap: 0.5rem;
+            text-align: center;
           }
         }
 
