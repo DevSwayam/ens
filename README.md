@@ -40,5 +40,3 @@ This will start:
 - **Server**: Express, TypeScript
 - **Package Manager**: pnpm workspaces
 - **Language**: TypeScript
-
-For more details, see the [docs](./docs/README.md) folder.

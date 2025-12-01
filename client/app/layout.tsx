@@ -2,8 +2,8 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'NS Monorepo',
-  description: 'Minimal monorepo with Next.js frontend',
+  title: 'ENS Playground',
+  description: 'Explore ENS names and view profile data from the Ethereum blockchain',
 }
 
 export default function RootLayout({
