@@ -7,7 +7,7 @@ import { normalize } from 'viem/ens'
 
 const client = createPublicClient({
   chain: mainnet,
-  transport: http(process.env.NEXT_PUBLIC_ETH_RPC_URL || 'https://eth.llamarpc.com'),
+  transport: http(process.env.NEXT_PUBLIC_ETH_RPC_URL),
 })
 
 interface ENSProfile {
